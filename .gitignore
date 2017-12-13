@@ -14,4 +14,9 @@
 keys/*.pem
 
 # Configs
-pylint.env
+.env
+
+# files
+server
+worker
+test.db

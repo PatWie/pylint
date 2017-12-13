@@ -24,7 +24,8 @@ type PyLintConfig struct {
 	Database struct {
 		Path string `env:"PYLINTGO_DB_PATH"         envDefault:"test.db"`
 	}
-	Port int    `env:"PYLINTGO_PORT"     envDefault:"3000"`
-	Url  string `env:"PYLINTGO_STATEURL" envDefault:"http://subdomain.domain.com/"`
-	Name string `env:"PYLINTGO_NAME"     envDefault:"PyLinter"`
+	Port       int    `env:"PYLINTGO_PORT"        envDefault:"4444"`
+	PublicPort int    `env:"PYLINTGO_PUBLICPORT"  envDefault:"9097"`
+	Url        string `env:"PYLINTGO_STATEURL"    envDefault:"http://subdomain.domain.com/"`
+	Name       string `env:"PYLINTGO_NAME"        envDefault:"PyLinter"`
 }

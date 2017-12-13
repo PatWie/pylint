@@ -4,8 +4,6 @@ version: "3"
 services:
   web:
     image: golang:1.8
-    env_file:
-      - ./pylint.env
     volumes:
       - .:/go/src/pylint
       - report-data:/data/reports
@@ -14,11 +12,9 @@ services:
     links:
       - pool:redis
     ports:
-      - "9097:4444"
+      - "${PYLINTGO_PUBLICPORT}:4444"
   worker:
     image: golang:1.8
-    env_file:
-      - ./pylint.env
     volumes:
       - .:/go/src/pylint
       - ./keys:/keys
@@ -29,8 +25,6 @@ services:
       - pool:redis
   shell:
     image: golang:1.8
-    env_file:
-      - ./pylint.env
     volumes:
       - .:/go/src/pylint
       - report-data:/data/reports

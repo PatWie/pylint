@@ -196,7 +196,8 @@ func main() {
 
 	// http server
 	// -------------------------------------------------------
-	log.Println("start application and listen on :", cfg.Port)
+	log.Println("start application and listen on (internal):", cfg.Port)
+	log.Println("start application and listen on (public):", cfg.PublicPort)
 	http.HandleFunc("/report/", HandleReports)
 	http.HandleFunc("/hook", HandleHooks)
 	http.HandleFunc("/home", HandleHome)
