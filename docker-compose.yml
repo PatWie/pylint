@@ -1,0 +1,43 @@
+version: "3"
+
+
+services:
+  web:
+    image: golang:1.8
+    env_file:
+      - ./pylint.env
+    volumes:
+      - .:/go/src/pylint
+      - report-data:/data/reports
+    working_dir: /go/src/pylint
+    command: go run server.go db.go config.go payload.go redis.go
+    links:
+      - pool:redis
+    ports:
+      - "9097:4444"
+  worker:
+    image: golang:1.8
+    env_file:
+      - ./pylint.env
+    volumes:
+      - .:/go/src/pylint
+      - ./keys:/keys
+      - report-data:/data/reports
+    working_dir: /go/src/pylint
+    command: ./worker_startup.sh
+    links:
+      - pool:redis
+  shell:
+    image: golang:1.8
+    env_file:
+      - ./pylint.env
+    volumes:
+      - .:/go/src/pylint
+      - report-data:/data/reports
+    working_dir: /go/src/pylint
+    command: bash
+  pool:
+    image: redis:alpine
+
+volumes:
+  report-data:
