@@ -22,7 +22,10 @@ type PyLintConfig struct {
 		KeyPath       string `env:"PYLINTGO_GITHUB_KEYPATH"         envDefault:"/keys/key.pem"`
 	}
 	Database struct {
-		Path string `env:"PYLINTGO_DB_PATH"         envDefault:"test.db"`
+		Host     string `env:"PYLINTGO_DB_HOST"         envDefault:"postgres"`
+		User     string `env:"PYLINTGO_DB_USER"         envDefault:"postgres"`
+		Name     string `env:"PYLINTGO_DB_NAME"         envDefault:"postgres"`
+		Password string `env:"PYLINTGO_DB_PASSWORD"     envDefault:"postgres"`
 	}
 	Port       int    `env:"PYLINTGO_PORT"        envDefault:"4444"`
 	PublicPort int    `env:"PYLINTGO_PUBLICPORT"  envDefault:"9097"`

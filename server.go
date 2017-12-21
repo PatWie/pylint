@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // wrapper for database
@@ -157,13 +158,18 @@ func HandleHooks(w http.ResponseWriter, r *http.Request) {
 		log.Println("github_integrationID " + strconv.FormatInt(cfg.Github.IntegrationID, 10))
 		log.Println("cc.Installation.ID " + strconv.FormatInt(cc.Installation.ID, 10))
 
+		// branch name is unfortunately not directly in the payload
+		repo_branch := strings.Split(cc.Ref, "/")
+		repo_branch = repo_branch[len(repo_branch)-1]
+
 		_, err := enqueuer.Enqueue("test_repo",
 			work.Q{
 				"integration_id":  strconv.FormatInt(cfg.Github.IntegrationID, 10),
 				"installation_id": strconv.FormatInt(cc.Installation.ID, 10),
 				"commit_sha1":     cc.After,
 				"repo_owner":      cc.Repository.Owner.Name,
-				"repo_name":       cc.Repository.Name})
+				"repo_name":       cc.Repository.Name,
+				"repo_branch":     repo_branch})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -186,7 +192,10 @@ func main() {
 	// database
 	// -------------------------------------------------------
 	var err error
-	db, err = gorm.Open("sqlite3", cfg.Database.Path)
+	// db, err = gorm.Open("sqlite3", cfg.Database.Path)
+	db, err := gorm.Open("postgres", "host="+cfg.Database.Host+
+		" user="+cfg.Database.User+" dbname="+cfg.Database.Name+
+		" sslmode=disable password="+cfg.Database.Path)
 	if err != nil {
 		panic("failed to connect database")
 	}

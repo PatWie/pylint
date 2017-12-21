@@ -10,3 +10,13 @@ type DBInstallation struct {
 	Installation int64
 	Sender       int64
 }
+
+// https://github.com/jinzhu/gorm/issues/146
+type DBLintStatus struct {
+	gorm.Model
+	Id           int64
+	Organization string
+	Repository   string
+	Branch       string
+	Status       bool
+}

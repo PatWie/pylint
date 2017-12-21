@@ -75,7 +75,10 @@ func main() {
 	log.Println("worker is ready ...")
 
 	// database
-	db, err = gorm.Open("sqlite3", cfg.Database.Path)
+	// db, err = gorm.Open("sqlite3", cfg.Database.Path)
+	db, err := gorm.Open("postgres", "host="+cfg.Database.Host+
+		" user="+cfg.Database.User+" dbname="+cfg.Database.Name+
+		" sslmode=disable password="+cfg.Database.Path)
 	if err != nil {
 		panic("failed to connect database")
 	}
@@ -107,6 +110,7 @@ func (c *WContext) TestRepo(job *work.Job) error {
 	commit_sha1 := job.ArgString("commit_sha1")
 	repo_owner := job.ArgString("repo_owner")
 	repo_name := job.ArgString("repo_name")
+	repo_branch := job.ArgString("repo_branch")
 
 	if err := job.ArgError(); err != nil {
 		log.Println(err)
@@ -118,6 +122,7 @@ func (c *WContext) TestRepo(job *work.Job) error {
 	log.Println("commit_sha1 " + commit_sha1)
 	log.Println("repo_owner " + repo_owner)
 	log.Println("repo_name " + repo_name)
+	log.Println("repo_branch " + repo_branch)
 
 	installation_id_int, err := strconv.Atoi(installation_id)
 	itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport,
@@ -162,6 +167,15 @@ func (c *WContext) TestRepo(job *work.Job) error {
 	for fileScanner.Scan() {
 		lineCount++
 	}
+
+	lintstatus := DBLintStatus{}
+
+	db.Where(DBLintStatus{Organization: repo_owner,
+		Repository: repo_name,
+		Branch:     repo_branch}).FirstOrInit(&lintstatus)
+
+	lintstatus.Status = (lineCount == 0)
+	db.Save(&lintstatus)
 
 	if lineCount > 0 {
 		_, _ = sendCommitStatus(ctx, commit_sha1,
