@@ -7,7 +7,6 @@ import (
 	"os"
 	"reflect"
 	"regexp"
-	"strconv"
 	"time"
 	"unicode"
 )
@@ -88,7 +87,6 @@ var LogFormatter = func(values ...interface{}) (messages []interface{}) {
 			}
 
 			messages = append(messages, sql)
-			messages = append(messages, fmt.Sprintf(" \n\033[36;31m[%v]\033[0m ", strconv.FormatInt(values[5].(int64), 10)+" rows affected or returned "))
 		} else {
 			messages = append(messages, "\033[31;1m")
 			messages = append(messages, values[2:]...)
