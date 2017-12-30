@@ -1,0 +1,10 @@
+FROM golang:1.8
+
+ENV GOPATH /go
+ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
+
+RUN cd /tmp && wget https://bootstrap.pypa.io/get-pip.py
+RUN cd /tmp && python get-pip.py
+RUN cd /tmp && pip install flake8
+
+WORKDIR $GOPATH

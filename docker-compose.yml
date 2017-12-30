@@ -5,48 +5,61 @@ services:
   web:
     image: golang:1.8
     volumes:
-      - .:/go/src/pylint
+      # - .:/go/src/pylint
+      - .:/go/src/github.com/patwie/pylint
       - report-data:/data/reports
-    working_dir: /go/src/pylint
-    command: go run server.go db.go config.go payload.go redis.go
+    working_dir: /go/src/github.com/patwie/pylint
+    command: go run server.go 
     links:
       - pool:redis
     env_file:
       - .env
     ports:
       - "${PYLINTGO_PUBLICPORT}:4444"
+    depends_on:
+      - db
+      - pool
+    networks:
+      - frontend
+      - backend
   worker:
     image: golang:1.8
     volumes:
-      - .:/go/src/pylint
+      - .:/go/src/github.com/patwie/pylint
       - ./keys:/keys
       - report-data:/data/reports
-    working_dir: /go/src/pylint
+    working_dir: /go/src/github.com/patwie/pylint
     env_file:
       - .env
-    command: ./worker_startup.sh
+    command: ./Docker/worker_startup.sh
     links:
       - pool:redis
-  shell:
-    image: golang:1.8
-    volumes:
-      - .:/go/src/pylint
-      - report-data:/data/reports
-    working_dir: /go/src/pylint
-    env_file:
-      - .env
-    command: bash
+    depends_on:
+      - db
+      - pool
+    networks:
+      - backend
   pool:
     image: redis:alpine
-  postgres:
-    image: postgres:9.3
+    networks:
+      - backend
+  db:
+    image: postgres
+    env_file:
+      - .env
     environment:
       - POSTGRES_USER=${PYLINTGO_DB_USER}
       - POSTGRES_PASSWORD=${PYLINTGO_DB_PASSWORD}
       - POSTGRES_DB=${PYLINTGO_DB_NAME}
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
 
 volumes:
   report-data:
   postgres-data:
+
+networks:
+  frontend:
+  backend:

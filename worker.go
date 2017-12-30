@@ -5,12 +5,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/bradleyfalzon/ghinstallation"
-	"github.com/caarlos0/env"
+	// "github.com/caarlos0/env"
 	// "github.com/garyburd/redigo/redis"
 	"github.com/gocraft/work"
 	"github.com/google/go-github/github"
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	// _ "github.com/jinzhu/gorm/dialects/sqlite"
+	"github.com/patwie/pylint/pylint"
 	"log"
 	"net/http"
 	"os"
@@ -19,74 +20,119 @@ import (
 	"strconv"
 )
 
-var cfg PyLintConfig
+type Workload struct {
+	InstallationId int
+	Commit         struct {
+		Organization string
+		Name         string
+		Branch       string
+		Sha1         string
+	}
+	Result struct {
+		Status string
+	}
+}
 
-// Send new commit status to GitHub server.
-func sendCommitStatus(
-	ctx context.Context,
-	commit string,
-	user_name string,
-	repo_name string,
-	status string,
-	client *github.Client) (*github.RepoStatus, error) {
+func NewWorkload(id string, org string, name string, branch string, sha1 string) Workload {
+	w := Workload{}
+	i, _ := strconv.Atoi(id)
+	w.InstallationId = i
+	w.Commit.Organization = org
+	w.Commit.Name = name
+	w.Commit.Branch = branch
+	w.Commit.Sha1 = sha1
 
-	state_url := cfg.Url + "report/" + commit
+	w.Result.Status = "pending"
+	return w
+}
+
+func (wl *Workload) SendStatus(ctx *context.Context, client *github.Client, status string) (*github.RepoStatus, error) {
+
+	state_url := pylint.Cfg.Url + "report/" + wl.Commit.Sha1
 	if status == "pending" {
-		state_url = cfg.Url + ""
+		state_url = pylint.Cfg.Url + ""
 	}
 
 	// convert to struct
-	new_state := github.RepoStatus{State: &status,
+	new_state := github.RepoStatus{
+		State:       &status,
 		TargetURL:   &state_url,
-		Description: &cfg.Name}
+		Description: &pylint.Cfg.Name}
 
 	// start sending
-	statuses, _, err := client.Repositories.CreateStatus(ctx, user_name,
-		repo_name, commit, &new_state)
+	statuses, _, err := client.Repositories.CreateStatus(
+		*ctx,
+		wl.Commit.Organization,
+		wl.Commit.Name,
+		wl.Commit.Sha1,
+		&new_state)
 	return statuses, err
+
 }
 
-var db *gorm.DB
+func (wl *Workload) RunTest(token string) ([]byte, error) {
+	cmd, err := exec.Command("/go/src/pylint/Docker/run.sh",
+		wl.Commit.Sha1,
+		token,
+		wl.Commit.Organization,
+		wl.Commit.Name).Output()
+	fmt.Println("done check")
+	fmt.Println(string(cmd))
+	return cmd, err
+}
+
+func (wl *Workload) LintStatus() pylint.DBLintStatus {
+	return pylint.DBLintStatus{Organization: wl.Commit.Organization,
+		Repository: wl.Commit.Name,
+		Branch:     wl.Commit.Branch}
+}
+
+func (wl *Workload) GetResult() (int, error) {
+	file, err := os.Open("/data/reports/" + wl.Commit.Sha1)
+	if err != nil {
+		return 0, err
+		// _, _ = sendCommitStatus(ctx, commit_sha1,
+		// 	repo_owner, repo_name, pylint.GIT_STATUS_FAILURE, client)
+	}
+	fileScanner := bufio.NewScanner(file)
+	lineCount := 0
+	for fileScanner.Scan() {
+		lineCount++
+	}
+	return lineCount, nil
+}
 
 type WContext struct{}
+
+var db *gorm.DB
 
 func main() {
 	var err error
 
-	// test redis
-	conn := RedisPool.Get()
-	defer conn.Close()
-	_, err = conn.Do("PING")
-	if err != nil {
-		log.Fatal("Can't connect to the Redis database")
-	}
-
 	// read config
-	if err := env.Parse(&cfg); err != nil {
-		log.Fatal("Unable to parse config: ", err)
-	}
-	if err := env.Parse(&cfg.Github); err != nil {
-		log.Fatal("Unable to parse config.GitHub: ", err)
-	}
-	if err := env.Parse(&cfg.Database); err != nil {
-		log.Fatal("Unable to parse config.Database: ", err)
+	pylint.Cfg.Parse()
+
+	// test redis
+	redis := pylint.ConnectRedis(pylint.Cfg)
+	defer redis.Close()
+	_, err = redis.Do("PING")
+	if err != nil {
+		log.Println(err)
+		log.Fatal("Can't connect to the Redis database")
 	}
 
 	log.Println("worker is ready ...")
 
-	// database
-	// db, err = gorm.Open("sqlite3", cfg.Database.Path)
-	db, err := gorm.Open("postgres", "host="+cfg.Database.Host+
-		" user="+cfg.Database.User+" dbname="+cfg.Database.Name+
-		" sslmode=disable password="+cfg.Database.Path)
+	err = pylint.ConnectDatabase(pylint.Cfg)
 	if err != nil {
 		panic("failed to connect database")
 	}
-	defer db.Close()
+	defer pylint.Database.Close()
 
-	db.AutoMigrate(&DBInstallation{})
+	pylint.Database.AutoMigrate(&pylint.DBInstallation{})
+	pylint.Database.AutoMigrate(&pylint.DBLintStatus{})
 
-	pool := work.NewWorkerPool(WContext{}, 10, "pylint_go", RedisPool)
+	pool := work.NewWorkerPool(WContext{}, 10, "pylint_go", pylint.RedisPool)
 	pool.Middleware((*WContext).Log)
 	pool.Job("test_repo", (*WContext).TestRepo)
 	pool.Start()
@@ -106,11 +152,13 @@ func (c *WContext) Log(job *work.Job, next work.NextMiddlewareFunc) error {
 }
 
 func (c *WContext) TestRepo(job *work.Job) error {
-	installation_id := job.ArgString("installation_id")
-	commit_sha1 := job.ArgString("commit_sha1")
-	repo_owner := job.ArgString("repo_owner")
-	repo_name := job.ArgString("repo_name")
-	repo_branch := job.ArgString("repo_branch")
+
+	wl := NewWorkload(
+		job.ArgString("installation_id"),
+		job.ArgString("repo_owner"),
+		job.ArgString("repo_name"),
+		job.ArgString("repo_branch"),
+		job.ArgString("commit_sha1"))
 
 	if err := job.ArgError(); err != nil {
 		log.Println(err)
@@ -118,18 +166,11 @@ func (c *WContext) TestRepo(job *work.Job) error {
 	}
 
 	log.Println("worker called")
-	log.Println("installation_id " + installation_id)
-	log.Println("commit_sha1 " + commit_sha1)
-	log.Println("repo_owner " + repo_owner)
-	log.Println("repo_name " + repo_name)
-	log.Println("repo_branch " + repo_branch)
 
-	installation_id_int, err := strconv.Atoi(installation_id)
 	itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport,
-		int(cfg.Github.IntegrationID),
-		installation_id_int,
-		cfg.Github.KeyPath)
-
+		int(pylint.Cfg.Github.IntegrationID),
+		wl.InstallationId,
+		pylint.Cfg.Github.KeyPath)
 	if err != nil {
 		log.Println("cannot generate token: " + err.Error())
 		return nil
@@ -143,47 +184,27 @@ func (c *WContext) TestRepo(job *work.Job) error {
 
 	client := github.NewClient(&http.Client{Transport: itr})
 	ctx := context.Background()
-	_, _ = sendCommitStatus(ctx, commit_sha1,
-		repo_owner, repo_name, GIT_STATUS_PENDING, client)
+
+	wl.SendStatus(&ctx, client, "pending")
 
 	// -------------------------------------------------
-
-	cmd, err := exec.Command("/go/src/pylint/run.sh", commit_sha1, access_token, repo_owner, repo_name).Output()
+	_, err = wl.RunTest(access_token)
 	if err != nil {
 		log.Println("cannot run pylintint script: " + err.Error())
 		return nil
 	}
 
-	fmt.Println("done check")
-	fmt.Println(string(cmd))
-
-	file, err := os.Open("/data/reports/" + commit_sha1)
-	if err != nil {
-		_, _ = sendCommitStatus(ctx, commit_sha1,
-			repo_owner, repo_name, GIT_STATUS_FAILURE, client)
-	}
-	fileScanner := bufio.NewScanner(file)
-	lineCount := 0
-	for fileScanner.Scan() {
-		lineCount++
-	}
-
-	lintstatus := DBLintStatus{}
-
-	db.Where(DBLintStatus{Organization: repo_owner,
-		Repository: repo_name,
-		Branch:     repo_branch}).FirstOrInit(&lintstatus)
-
-	lintstatus.Status = (lineCount == 0)
-	db.Save(&lintstatus)
-
-	if lineCount > 0 {
-		_, _ = sendCommitStatus(ctx, commit_sha1,
-			repo_owner, repo_name, GIT_STATUS_FAILURE, client)
+	lineCount, err := wl.GetResult()
+	if err != nil || lineCount > 0 {
+		wl.SendStatus(&ctx, client, "failed")
 	} else {
-		_, _ = sendCommitStatus(ctx, commit_sha1,
-			repo_owner, repo_name, GIT_STATUS_SUCCESS, client)
+		wl.SendStatus(&ctx, client, "success")
 	}
+
+	lintstatus := pylint.DBLintStatus{}
+	pylint.Database.Where(wl.LintStatus()).FirstOrInit(&lintstatus)
+	lintstatus.Status = lineCount
+	pylint.Database.Save(&lintstatus)
 
 	fmt.Println("number of lines from flake8:", lineCount)
 
