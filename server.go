@@ -25,6 +25,7 @@ func main() {
 		panic("failed to connect database")
 	}
 	defer pylint.Database.Close()
+	pylint.MigrateDatabase(pylint.Database)
 
 	redis := pylint.ConnectRedis(pylint.Cfg)
 	defer redis.Close()
@@ -36,22 +37,15 @@ func main() {
 
 	pylint.CreateQueue(pylint.RedisPool)
 
-	pylint.Database.AutoMigrate(&pylint.DBInstallation{})
-	pylint.Database.AutoMigrate(&pylint.DBLintStatus{})
-
-	// http server
-	// -------------------------------------------------------
 	log.Println("start application and listen on (internal):", pylint.Cfg.Port)
 	log.Println("start application and listen on (public):", pylint.Cfg.PublicPort)
 
 	root := goji.NewMux()
-	root.HandleFunc(pat.Get("/hook"), pylint.HandleHooks)
+	root.HandleFunc(pat.Post("/hook"), pylint.HandleHooks)
 	root.HandleFunc(pat.Get("/home"), pylint.HandleHome)
+	root.HandleFunc(pat.Get("/:org/:name/:branch/status.svg"), pylint.HandleStatus)
+	root.HandleFunc(pat.Get("/:org/:name/:commit/report"), pylint.HandleReports)
 
-	repos := goji.SubMux()
-	root.Handle(pat.New("/r/:org/:name/*"), repos)
-	root.HandleFunc(pat.Get("/:commit"), pylint.HandleReports)
-	root.HandleFunc(pat.Get("/status.svg"), pylint.HandleStatus)
 	http.ListenAndServe(fmt.Sprintf(":%d", pylint.Cfg.Port), root)
 
 }

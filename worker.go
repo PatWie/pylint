@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	// "bufio"
 	"context"
 	"fmt"
 	"github.com/bradleyfalzon/ghinstallation"
@@ -15,92 +15,10 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
+	// "os/exec"
 	"os/signal"
-	"strconv"
+	// "strconv"
 )
-
-type Workload struct {
-	InstallationId int
-	Commit         struct {
-		Organization string
-		Name         string
-		Branch       string
-		Sha1         string
-	}
-	Result struct {
-		Status string
-	}
-}
-
-func NewWorkload(id string, org string, name string, branch string, sha1 string) Workload {
-	w := Workload{}
-	i, _ := strconv.Atoi(id)
-	w.InstallationId = i
-	w.Commit.Organization = org
-	w.Commit.Name = name
-	w.Commit.Branch = branch
-	w.Commit.Sha1 = sha1
-
-	w.Result.Status = "pending"
-	return w
-}
-
-func (wl *Workload) SendStatus(ctx *context.Context, client *github.Client, status string) (*github.RepoStatus, error) {
-
-	state_url := pylint.Cfg.Url + "report/" + wl.Commit.Sha1
-	if status == "pending" {
-		state_url = pylint.Cfg.Url + ""
-	}
-
-	// convert to struct
-	new_state := github.RepoStatus{
-		State:       &status,
-		TargetURL:   &state_url,
-		Description: &pylint.Cfg.Name}
-
-	// start sending
-	statuses, _, err := client.Repositories.CreateStatus(
-		*ctx,
-		wl.Commit.Organization,
-		wl.Commit.Name,
-		wl.Commit.Sha1,
-		&new_state)
-	return statuses, err
-
-}
-
-func (wl *Workload) RunTest(token string) ([]byte, error) {
-	cmd, err := exec.Command("/go/src/pylint/Docker/run.sh",
-		wl.Commit.Sha1,
-		token,
-		wl.Commit.Organization,
-		wl.Commit.Name).Output()
-	fmt.Println("done check")
-	fmt.Println(string(cmd))
-	return cmd, err
-}
-
-func (wl *Workload) LintStatus() pylint.DBLintStatus {
-	return pylint.DBLintStatus{Organization: wl.Commit.Organization,
-		Repository: wl.Commit.Name,
-		Branch:     wl.Commit.Branch}
-}
-
-func (wl *Workload) GetResult() (int, error) {
-	file, err := os.Open("/data/reports/" + wl.Commit.Sha1)
-	if err != nil {
-		return 0, err
-		// _, _ = sendCommitStatus(ctx, commit_sha1,
-		// 	repo_owner, repo_name, pylint.GIT_STATUS_FAILURE, client)
-	}
-	fileScanner := bufio.NewScanner(file)
-	lineCount := 0
-	for fileScanner.Scan() {
-		lineCount++
-	}
-	return lineCount, nil
-}
 
 type WContext struct{}
 
@@ -128,9 +46,7 @@ func main() {
 		panic("failed to connect database")
 	}
 	defer pylint.Database.Close()
-
-	pylint.Database.AutoMigrate(&pylint.DBInstallation{})
-	pylint.Database.AutoMigrate(&pylint.DBLintStatus{})
+	pylint.MigrateDatabase(pylint.Database)
 
 	pool := work.NewWorkerPool(WContext{}, 10, "pylint_go", pylint.RedisPool)
 	pool.Middleware((*WContext).Log)
@@ -153,7 +69,7 @@ func (c *WContext) Log(job *work.Job, next work.NextMiddlewareFunc) error {
 
 func (c *WContext) TestRepo(job *work.Job) error {
 
-	wl := NewWorkload(
+	wl := pylint.NewWorkload(
 		job.ArgString("installation_id"),
 		job.ArgString("repo_owner"),
 		job.ArgString("repo_name"),
@@ -177,6 +93,7 @@ func (c *WContext) TestRepo(job *work.Job) error {
 	}
 
 	access_token, terr := itr.Token()
+	log.Println(access_token)
 	if terr != nil {
 		log.Println("cannot fetch access_token: " + terr.Error())
 		return nil
@@ -185,28 +102,33 @@ func (c *WContext) TestRepo(job *work.Job) error {
 	client := github.NewClient(&http.Client{Transport: itr})
 	ctx := context.Background()
 
-	wl.SendStatus(&ctx, client, "pending")
+	wl.SendStatus(&ctx, client, pylint.GIT_STATUS_PENDING)
 
 	// -------------------------------------------------
-	_, err = wl.RunTest(access_token)
-	if err != nil {
-		log.Println("cannot run pylintint script: " + err.Error())
-		return nil
-	}
+	cmd, err := wl.RunTest(access_token)
+	log.Println(cmd)
+	log.Println(err.Error())
+	// // if err != nil {
+	// // 	log.Println("cannot run pylintint script: " + err.Error())
+	// // 	return nil
+	// // }
 
-	lineCount, err := wl.GetResult()
-	if err != nil || lineCount > 0 {
-		wl.SendStatus(&ctx, client, "failed")
-	} else {
-		wl.SendStatus(&ctx, client, "success")
-	}
+	// log.Println("alive")
+	// err = wl.GetResult()
+	// if err != nil || wl.Result.Lines > 0 {
+	// 	log.Println(err.Error())
+	// 	wl.SendStatus(&ctx, client, pylint.GIT_STATUS_FAILURE)
+	// } else {
+	// 	wl.SendStatus(&ctx, client, pylint.GIT_STATUS_SUCCESS)
+	// }
+	// log.Println("alive2")
 
-	lintstatus := pylint.DBLintStatus{}
-	pylint.Database.Where(wl.LintStatus()).FirstOrInit(&lintstatus)
-	lintstatus.Status = lineCount
-	pylint.Database.Save(&lintstatus)
+	// // lintstatus := pylint.DBLintStatus{}
+	// // pylint.Database.Where(wl.LintStatus()).FirstOrInit(&lintstatus)
+	// // lintstatus.Status = wl.Result.Lines
+	// // pylint.Database.Save(&lintstatus)
 
-	fmt.Println("number of lines from flake8:", lineCount)
+	fmt.Println("number of lines from flake8:", wl.Result.Lines)
 
 	return nil
 }

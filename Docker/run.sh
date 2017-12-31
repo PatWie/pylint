@@ -16,8 +16,11 @@ echo "--> run flake8 ."
 # flake8 .
 
 flake8 . &> report_${COMMIT}
+cat report_${COMMIT}
 
+echo "--> save report"
 cd ${DIR}
 cp /tmp/${COMMIT}/report_${COMMIT} /data/reports/${COMMIT}
 
-rm -rf /tmp/${COMMIT}
+# rm -rf /tmp/${COMMIT}
+echo "--> finished"

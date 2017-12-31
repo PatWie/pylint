@@ -23,7 +23,10 @@ services:
       - frontend
       - backend
   worker:
-    image: golang:1.8
+    # image: golang:1.8
+    build:
+      context: .
+      dockerfile: ./Docker/worker.Docker
     volumes:
       - .:/go/src/github.com/patwie/pylint
       - ./keys:/keys

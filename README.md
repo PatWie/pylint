@@ -30,6 +30,12 @@ You need to fill out:
 
 The Webhook secret is **not** optional for this webservice. You will need to note the `ID` (INTEGRATIONID) in the `About`-Section. Generate a `Private key` and download the key. Name it like `my-pylint-key.pem`. We do not need OAuth credentials.
 
+The following Permission are required:
+- Commit status: Read&Write
+- Repository content: ReadOnly
+
+And subscribe to the event: Push
+
 ### Prepare pylint
 
 I propose to clone this repository

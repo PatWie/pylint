@@ -36,8 +36,18 @@ func HandleHome(w http.ResponseWriter, req *http.Request) {
 }
 
 func HandleStatus(w http.ResponseWriter, req *http.Request) {
-	writeResponse(w, "org "+pat.Param(req, "org")+
-		"name "+pat.Param(req, "name"))
+
+	// organization := pat.Param(req, "org")
+	name := pat.Param(req, "name")
+
+	b, err := ioutil.ReadFile("badges/badge-pylint-" + name + ".svg") // just pass the file name
+	if err != nil {
+		http.Error(w, "500 internal Server Error - Badge not found", http.StatusBadRequest)
+	} else {
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Write(b)
+
+	}
 
 }
 
@@ -66,6 +76,7 @@ func HandleHooks(w http.ResponseWriter, r *http.Request) {
 	// verify signature
 	signature := r.Header.Get("X-Hub-Signature")
 	if len(signature) == 0 {
+		log.Println("403 Forbidden - Missing X-Hub-Signature required for HMAC verification")
 		http.Error(w, "403 Forbidden - Missing X-Hub-Signature required for HMAC verification", http.StatusForbidden)
 		return
 	}
@@ -76,12 +87,14 @@ func HandleHooks(w http.ResponseWriter, r *http.Request) {
 	mac.Write(payload)
 	expectedMAC := hex.EncodeToString(mac.Sum(nil))
 	if !hmac.Equal([]byte(actualMAC), []byte(expectedMAC)) {
+		log.Println("403 Forbidden - HMAC verification failed")
 		http.Error(w, "403 Forbidden - HMAC verification failed", http.StatusForbidden)
 		return
 	}
 
 	event := r.Header.Get("X-GitHub-Event")
 	if len(event) == 0 {
+		log.Println("400 Bad Request - Missing X-GitHub-Event Header")
 		http.Error(w, "400 Bad Request - Missing X-GitHub-Event Header", http.StatusBadRequest)
 		return
 	}

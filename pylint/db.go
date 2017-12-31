@@ -21,7 +21,6 @@ func DeleteInstallation(cc InstallationPayload) {
 	Database.Where("installation = ?", cc.Installation.ID).Delete(DBInstallation{})
 }
 
-// https://github.com/jinzhu/gorm/issues/146
 type DBLintStatus struct {
 	gorm.Model
 	Organization string
@@ -30,6 +29,10 @@ type DBLintStatus struct {
 	Commit       string
 	Msg          string
 	Status       int
+}
+
+func FindLintStatus(org string, name string, branch string) {
+
 }
 
 // wrapper for database
@@ -49,4 +52,9 @@ func ConnectDatabase(cfg Config) error {
 	Database, err = gorm.Open("postgres", connInfo)
 
 	return err
+}
+
+func MigrateDatabase(db *gorm.DB) {
+	db.AutoMigrate(&DBInstallation{})
+	db.AutoMigrate(&DBLintStatus{})
 }
