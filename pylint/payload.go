@@ -1,6 +1,25 @@
-package main
+package pylint
 
 import "time"
+
+const (
+	GIT_STATUS_FAILURE string = "failure"
+	GIT_STATUS_PENDING string = "pending"
+	GIT_STATUS_SUCCESS string = "success"
+)
+
+func StatusCode(str string) int {
+	ans := 1
+	switch str {
+	case GIT_STATUS_SUCCESS:
+		ans = 0
+	case GIT_STATUS_FAILURE:
+		ans = 1
+	case GIT_STATUS_PENDING:
+		ans = 2
+	}
+	return ans
+}
 
 // Parent contains GitHub's parent information
 type Parent struct {

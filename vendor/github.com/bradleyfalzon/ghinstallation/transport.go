@@ -1,12 +1,16 @@
 package ghinstallation
 
 import (
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
+
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
 const (
@@ -16,7 +20,7 @@ const (
 )
 
 // Transport provides a http.RoundTripper by wrapping an existing
-// http.RoundTripper and provides GitHub Apps authentication as an
+// http.RoundTripper and provides GitHub Integration authentication as an
 // installation.
 //
 // Client can also be overwritten, and is useful to change to one which
@@ -27,9 +31,9 @@ type Transport struct {
 	BaseURL        string            // baseURL is the scheme and host for GitHub API, defaults to https://api.github.com
 	Client         Client            // Client to use to refresh tokens, defaults to http.Client with provided transport
 	tr             http.RoundTripper // tr is the underlying roundtripper being wrapped
+	key            *rsa.PrivateKey   // key is the GitHub Integration's private key
 	integrationID  int               // integrationID is the GitHub Integration's Installation ID
 	installationID int               // installationID is the GitHub Integration's Installation ID
-	appsTransport  *AppsTransport
 
 	mu    *sync.Mutex  // mu protects token
 	token *accessToken // token is the installation's access token
@@ -43,7 +47,7 @@ type accessToken struct {
 
 var _ http.RoundTripper = &Transport{}
 
-// NewKeyFromFile returns a Transport using a private key from file.
+// NewKeyFromFile returns an Transport using a private key from file.
 func NewKeyFromFile(tr http.RoundTripper, integrationID, installationID int, privateKeyFile string) (*Transport, error) {
 	privateKey, err := ioutil.ReadFile(privateKeyFile)
 	if err != nil {
@@ -59,7 +63,7 @@ type Client interface {
 }
 
 // New returns an Transport using private key. The key is parsed
-// and if any errors occur the error is non-nil.
+// and if any errors occur the transport is nil and error is non-nil.
 //
 // The provided tr http.RoundTripper should be shared between multiple
 // installations to ensure reuse of underlying TCP connections.
@@ -75,9 +79,9 @@ func New(tr http.RoundTripper, integrationID, installationID int, privateKey []b
 		mu:             &sync.Mutex{},
 	}
 	var err error
-	t.appsTransport, err = NewAppsTransport(t.tr, t.integrationID, privateKey)
+	t.key, err = jwt.ParseRSAPrivateKeyFromPEM(privateKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse private key: %s", err)
 	}
 	return t, nil
 }
@@ -90,7 +94,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	req.Header.Set("Authorization", "token "+token)
-	req.Header.Add("Accept", acceptHeader) // We add to "Accept" header to avoid overwriting existing req headers.
+	req.Header.Set("Accept", acceptHeader)
 	resp, err := t.tr.RoundTrip(req)
 	return resp, err
 }
@@ -111,14 +115,27 @@ func (t *Transport) Token() (string, error) {
 }
 
 func (t *Transport) refreshToken() error {
+	// TODO these claims could probably be reused between installations before expiry
+	claims := &jwt.StandardClaims{
+		IssuedAt:  time.Now().Unix(),
+		ExpiresAt: time.Now().Add(time.Minute).Unix(),
+		Issuer:    strconv.Itoa(t.integrationID),
+	}
+	bearer := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+
+	ss, err := bearer.SignedString(t.key)
+	if err != nil {
+		return fmt.Errorf("could not sign jwt: %s", err)
+	}
+
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/installations/%v/access_tokens", t.BaseURL, t.installationID), nil)
 	if err != nil {
 		return fmt.Errorf("could not create request: %s", err)
 	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", ss))
+	req.Header.Set("Accept", acceptHeader)
 
-	t.appsTransport.BaseURL = t.BaseURL
-	t.appsTransport.Client = t.Client
-	resp, err := t.appsTransport.RoundTrip(req)
+	resp, err := t.Client.Do(req)
 	if err != nil {
 		return fmt.Errorf("could not get access_tokens from GitHub API for installation ID %v: %v", t.installationID, err)
 	}

@@ -2,6 +2,7 @@ package gorm
 
 import (
 	"fmt"
+	"regexp"
 )
 
 type search struct {
@@ -72,7 +73,13 @@ func (s *search) Order(value interface{}, reorder ...bool) *search {
 	return s
 }
 
+var distinctSQLRegexp = regexp.MustCompile(`(?i)distinct[^a-z]+[a-z]+`)
+
 func (s *search) Select(query interface{}, args ...interface{}) *search {
+	if distinctSQLRegexp.MatchString(fmt.Sprint(query)) {
+		s.ignoreOrderQuery = true
+	}
+
 	s.selects = map[string]interface{}{"query": query, "args": args}
 	return s
 }
@@ -97,12 +104,8 @@ func (s *search) Group(query string) *search {
 	return s
 }
 
-func (s *search) Having(query interface{}, values ...interface{}) *search {
-	if val, ok := query.(*expr); ok {
-		s.havingConditions = append(s.havingConditions, map[string]interface{}{"query": val.expr, "args": val.args})
-	} else {
-		s.havingConditions = append(s.havingConditions, map[string]interface{}{"query": query, "args": values})
-	}
+func (s *search) Having(query string, values ...interface{}) *search {
+	s.havingConditions = append(s.havingConditions, map[string]interface{}{"query": query, "args": values})
 	return s
 }
 

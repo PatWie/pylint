@@ -253,25 +253,15 @@ func (scope *Scope) CallMethod(methodName string) {
 
 // AddToVars add value as sql's vars, used to prevent SQL injection
 func (scope *Scope) AddToVars(value interface{}) string {
-	_, skipBindVar := scope.InstanceGet("skip_bindvar")
-
 	if expr, ok := value.(*expr); ok {
 		exp := expr.expr
 		for _, arg := range expr.args {
-			if skipBindVar {
-				scope.AddToVars(arg)
-			} else {
-				exp = strings.Replace(exp, "?", scope.AddToVars(arg), 1)
-			}
+			exp = strings.Replace(exp, "?", scope.AddToVars(arg), 1)
 		}
 		return exp
 	}
 
 	scope.SQLVars = append(scope.SQLVars, value)
-
-	if skipBindVar {
-		return "?"
-	}
 	return scope.Dialect().BindVar(len(scope.SQLVars))
 }
 
@@ -339,12 +329,12 @@ func (scope *Scope) QuotedTableName() (name string) {
 
 // CombinedConditionSql return combined condition sql
 func (scope *Scope) CombinedConditionSql() string {
-	joinSQL := scope.joinsSQL()
-	whereSQL := scope.whereSQL()
+	joinSql := scope.joinsSQL()
+	whereSql := scope.whereSQL()
 	if scope.Search.raw {
-		whereSQL = strings.TrimSuffix(strings.TrimPrefix(whereSQL, "WHERE ("), ")")
+		whereSql = strings.TrimSuffix(strings.TrimPrefix(whereSql, "WHERE ("), ")")
 	}
-	return joinSQL + whereSQL + scope.groupSQL() +
+	return joinSql + whereSql + scope.groupSQL() +
 		scope.havingSQL() + scope.orderSQL() + scope.limitAndOffsetSQL()
 }
 
@@ -1139,7 +1129,7 @@ func (scope *Scope) dropTable() *Scope {
 }
 
 func (scope *Scope) modifyColumn(column string, typ string) {
-	scope.Raw(fmt.Sprintf("ALTER TABLE %v ALTER COLUMN %v TYPE %v", scope.QuotedTableName(), scope.Quote(column), typ)).Exec()
+	scope.Raw(fmt.Sprintf("ALTER TABLE %v MODIFY %v %v", scope.QuotedTableName(), scope.Quote(column), typ)).Exec()
 }
 
 func (scope *Scope) dropColumn(column string) {
