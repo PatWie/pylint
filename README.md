@@ -7,6 +7,8 @@ The main advantages of this service are:
 - minimal permissions are required in GitHub with per-repository permission (all advantages from Github Apps)
 - can be self-hosted
 
+See the [badge-branch](https://github.com/PatWie/pylint/tree/badge) for the refactoring effort. This is my first GOlang project, it is a safe bet that I break many Go-idioms. Don't start to count them.
+
 ## Install
 
 The essential steps are:
