@@ -4,6 +4,7 @@ version: "3"
 services:
   web:
     image: golang:1.8
+    restart: always
     volumes:
       - .:/go/src/pylint
       - report-data:/data/reports
@@ -15,6 +16,7 @@ services:
       - "${PYLINTGO_PUBLICPORT}:4444"
   worker:
     image: golang:1.8
+    restart: always
     volumes:
       - .:/go/src/pylint
       - ./keys:/keys
@@ -31,6 +33,7 @@ services:
     working_dir: /go/src/pylint
     command: bash
   pool:
+    restart: always
     image: redis:alpine
 
 volumes:
