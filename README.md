@@ -1,4 +1,5 @@
 # PyLint
+[![Build Status](http://ci.patwie.com/api/badges/PatWie/pylint/status.svg)](http://ci.patwie.com/PatWie/pylint)
 
 A small webservice written in Go to lint python projects hosted at GitHub using pyflakes.
 The main advantages of this service are:
