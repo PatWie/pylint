@@ -33,14 +33,11 @@ func TestRouter(t *testing.T) {
 		})
 
 		g.It("Should play ping pong", func() {
-
-			expectedBody, _ := json.Marshal(map[string]string{"answer": "pong"})
-
 			req, _ := http.NewRequest("GET", "/ping", nil)
 			resp := httptest.NewRecorder()
 			r.ServeHTTP(resp, req)
 			g.Assert(resp.Code).Equal(http.StatusOK)
-			g.Assert(resp.Body.String()).Equal(string(expectedBody))
+			g.Assert(resp.Body.String()).Equal(string("pong"))
 		})
 
 	})

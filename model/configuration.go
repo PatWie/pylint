@@ -43,7 +43,8 @@ func (c *Configuration) Debug() {
 func GetConfiguration() (conf *Configuration) {
 	config_fn := os.Getenv("PYLINT_CONFIGURATION")
 	if config_fn == "" {
-		panic("Need to set PYLINT_CONFIGURATION=")
+		fmt.Println("no config (env-var PYLINT_CONFIGURATION is empty)")
+		return &Configuration{}
 	}
 
 	y, err := ioutil.ReadFile(config_fn)
