@@ -31,3 +31,6 @@ secrets.txt
 .github/pylint/
 .github/pylint.tar.gz
 
+docker-compose.yml
+pylint-configuration.yml
+
