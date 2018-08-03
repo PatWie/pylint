@@ -6,7 +6,7 @@
   <img src=".github/pylint-screen.png" style="max-width:100%;" />
 </p>
 
-![Build Status PyLint ](https://ci.patwie.com/api/badges/PatWie/pylint/status.svg)
+[![Build Status PyLint ](https://ci.patwie.com/api/badges/PatWie/pylint/status.svg)](https://ci.patwie.com/PatWie/pylint)
 
 Features:
 
