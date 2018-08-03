@@ -1,0 +1,15 @@
+workspace:
+  base: /go
+  path: src/github.com/patwie/pylint
+
+pipeline:
+  build:
+    image: golang:1.10.0
+    commands:
+      - go build pylint-server.go
+      - go build pylint-worker.go
+  testing:
+    image: golang:1.10.0
+    commands:
+      - cd router && go test
+      - cd ../service/flake8 && go test
