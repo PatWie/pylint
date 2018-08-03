@@ -92,7 +92,6 @@ func BuildReport(msgs []*MessageLine) *github.CheckRunOutput {
 	countFailures := 0
 
 	for _, msg := range msgs {
-		msg.File = "test.py"
 		annotations = append(annotations, msg.ToRunAnnotation())
 
 		if msg.WarningLevel() == "failure" {
