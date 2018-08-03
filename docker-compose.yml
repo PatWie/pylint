@@ -11,7 +11,7 @@ services:
       - .:/go/src/github.com/patwie/pylint
       - report-data:/data/reports
     working_dir: /go/src/github.com/patwie/pylint
-    command: go run pylint-server.go
+    command: ./scripts/worker_server.sh
     links:
       - redis
     ports:
