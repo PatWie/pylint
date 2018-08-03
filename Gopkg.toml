@@ -30,10 +30,6 @@
   version = "0.1.2"
 
 [[constraint]]
-  name = "github.com/caarlos0/env"
-  version = "3.3.0"
-
-[[constraint]]
   name = "github.com/franela/goblin"
   version = "0.0.2"
 
