@@ -1,4 +1,4 @@
-PyLint is a self-hosted *lightweight* GitHub Integration to lint python code in your git repositories. It supports the new GitHub Checks API.
+[PyLint](https://github.com/PatWie/pylint) is a self-hosted *lightweight* GitHub Integration to lint python code in your git repositories. It supports the new GitHub Checks API.
 
 <br/>
 
