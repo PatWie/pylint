@@ -28,7 +28,7 @@ func RunLinter(access_token string, repoOwner string, repoName string, commitSHA
 	// run linter
 	ss, err := exec.Command("./scripts/run_job.sh", commitSHA, access_token, repoOwner, repoName, config.Pylint.ReportsPath).Output()
 	if err != nil {
-		log.Println("cannot run pylintint script: " + err.Error())
+		log.Println("cannot run pylinting script: " + err.Error())
 		return nil, err
 	}
 	fmt.Println(string(ss))

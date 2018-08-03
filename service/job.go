@@ -112,7 +112,8 @@ func (c *WorkerContext) TestRepo(job *work.Job) error {
 	log.Println(opt)
 	_, _, err = client.Checks.CreateCheckRun(ctx, repoOwner, repoName, opt)
 	if err != nil {
-		panic(err)
+		log.Println(err)
+		return nil
 	}
 
 	messages, err := RunLinter(access_token, repoOwner, repoName, commitSHA)
