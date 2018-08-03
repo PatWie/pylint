@@ -81,18 +81,20 @@ func HookHandler(w http.ResponseWriter, r *http.Request) {
 	//
 	// GitHub API docs: https://developer.github.com/v3/activity/events/types/#checksuiteevent
 	case *github.CheckRunEvent:
-		b := &model.Build{
-			InstallationID: int(*e.Installation.ID),
-			SHA:            *e.CheckRun.CheckSuite.HeadSHA,
-			Owner:          *e.Repo.Owner.Login,
-			Repository:     *e.Repo.Name,
-			Branch:         *e.CheckRun.CheckSuite.HeadBranch,
-		}
+		if *e.Action == "requested" || *e.Action == "re-requested" {
+			b := &model.Build{
+				InstallationID: int(*e.Installation.ID),
+				SHA:            *e.CheckRun.CheckSuite.HeadSHA,
+				Owner:          *e.Repo.Owner.Login,
+				Repository:     *e.Repo.Name,
+				Branch:         *e.CheckRun.CheckSuite.HeadBranch,
+			}
 
-		_, err := enqueuer.Enqueue("test_repo", b.Serialize())
-		if err != nil {
-			http.Error(w, "500 Internal Server Error - See logs", http.StatusInternalServerError)
-			log.Fatalln(err)
+			_, err := enqueuer.Enqueue("test_repo", b.Serialize())
+			if err != nil {
+				http.Error(w, "500 Internal Server Error - See logs", http.StatusInternalServerError)
+				log.Fatalln(err)
+			}
 		}
 
 	default:
