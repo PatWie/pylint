@@ -5,36 +5,37 @@ services:
   web:
     image: golang:1.8
     restart: always
+    environment:
+      - PYLINT_CONFIGURATION=pylint-configuration.yml
     volumes:
-      - .:/go/src/pylint
+      - .:/go/src/github.com/patwie/pylint
       - report-data:/data/reports
-    working_dir: /go/src/pylint
-    command: go run server.go db.go config.go payload.go redis.go
+    working_dir: /go/src/github.com/patwie/pylint
+    command: go run pylint-server.go
     links:
-      - pool:redis
+      - redis
     ports:
-      - "${PYLINTGO_PUBLICPORT}:4444"
+      - "8080:8080"
+
   worker:
     image: golang:1.8
     restart: always
+    environment:
+      - PYLINT_CONFIGURATION=pylint-configuration.yml
     volumes:
-      - .:/go/src/pylint
+      - .:/go/src/github.com/patwie/pylint
       - ./keys:/keys
       - report-data:/data/reports
-    working_dir: /go/src/pylint
-    command: ./worker_startup.sh
+    working_dir: /go/src/github.com/patwie/pylint
+    command: ./scripts/worker_startup.sh
     links:
-      - pool:redis
-  shell:
-    image: golang:1.8
-    volumes:
-      - .:/go/src/pylint
-      - report-data:/data/reports
-    working_dir: /go/src/pylint
-    command: bash
-  pool:
+      - redis
+
+  redis:
+    hostname: redis
     restart: always
     image: redis:alpine
+    command: ["redis-server", "--appendonly", "yes"]
 
 volumes:
   report-data:

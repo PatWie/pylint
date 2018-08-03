@@ -1,0 +1,5 @@
+./untitled.py:42:13: E741 ambiguous variable name 'I'
+./untitled.py:44:13: W741 ambiguous variable name 'I'
+./untitled2.py:45:9: E741 ambiguous variable name 'Dummy'
+./foo.py:126:1: E302 expected 2 blank lines, found 0
+./bar.py:166:32: E231 missing whitespace after ','

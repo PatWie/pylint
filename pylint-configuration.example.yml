@@ -1,0 +1,13 @@
+github:
+  integration_id: 00000
+  secret: "<your-secret>"
+pylint:
+  name: PyLint
+  port: 8080
+  url: http://pylint.domain.com
+  reports_path: /data/reports
+  key_file: /keys/private-key.pem
+  database_file: ./pylint.db
+redis:
+  host: redis
+  port: 6379

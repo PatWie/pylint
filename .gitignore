@@ -1,5 +1,7 @@
+### Go ###
 # Binaries for programs and plugins
 *.exe
+*.exe~
 *.dll
 *.so
 *.dylib
@@ -10,13 +12,19 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Keys
-keys/*.pem
+### Go Patch ###
+/vendor/
+/Godeps/
 
-# Configs
-.env
-
-# files
+# custom
 server
 worker
-test.db
+debug
+pylint-server
+pylint-worker
+pylint-debug
+data/reports/
+*.db
+.local/
+secrets.txt
+*.pem
