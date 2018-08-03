@@ -6,5 +6,5 @@ wget https://bootstrap.pypa.io/get-pip.py
 python get-pip.py
 pip install flake8
 cd ${CURDIR}
-go get
-go run pylint-worker.go
+go build pylint-worker.go
+./pylint-worker
