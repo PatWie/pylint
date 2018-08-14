@@ -43,7 +43,7 @@
 
 [[constraint]]
   name = "github.com/google/go-github"
-  branch = "master"
+  version = "17.0.0"
 
 [[constraint]]
   name = "github.com/jinzhu/gorm"
