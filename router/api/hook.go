@@ -23,12 +23,14 @@ func HookHandler(w http.ResponseWriter, r *http.Request) {
 	payload, err := github.ValidatePayload(r, []byte(config.GitHub.Secret))
 	if err != nil {
 		http.Error(w, "400 Bad Request - Invalid request body (GitHub secret might be invalid)", http.StatusBadRequest)
+		log.Println(err)
 		return
 	}
 
 	event, err := github.ParseWebHook(github.WebHookType(r), payload)
 	if err != nil {
 		http.Error(w, "400 Bad Request - Could not parse webhook", http.StatusBadRequest)
+		log.Println(err)
 		return
 	}
 
