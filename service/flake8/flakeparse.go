@@ -91,8 +91,11 @@ func BuildReport(msgs []*MessageLine) *github.CheckRunOutput {
 	countWarnings := 0
 	countFailures := 0
 
+	max_reports := 49
 	for _, msg := range msgs {
-		annotations = append(annotations, msg.ToRunAnnotation())
+		if max_reports >= 0 {
+			annotations = append(annotations, msg.ToRunAnnotation())
+		}
 
 		if msg.WarningLevel() == "failure" {
 			countFailures++
@@ -100,6 +103,8 @@ func BuildReport(msgs []*MessageLine) *github.CheckRunOutput {
 		if msg.WarningLevel() == "warning" {
 			countWarnings++
 		}
+		max_reports--
+
 	}
 
 	return &github.CheckRunOutput{
