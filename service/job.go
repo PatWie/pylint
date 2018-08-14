@@ -100,7 +100,7 @@ func (c *WorkerContext) TestRepo(job *work.Job) error {
 		Name:       config.Pylint.Name,
 		HeadBranch: repoBranch,
 		HeadSHA:    commitSHA,
-		DetailsURL: github.String(fmt.Sprintf("%s/%s/%s/report/%s", config.Pylint.URL, repoOwner, repoName, commitSHA)),
+		DetailsURL: github.String(fmt.Sprintf("%s/", config.Pylint.URL)),
 		StartedAt:  &github.Timestamp{startTime},
 		Status:     github.String("in_progress"),
 		Output: &github.CheckRunOutput{
@@ -125,6 +125,7 @@ func (c *WorkerContext) TestRepo(job *work.Job) error {
 		Name:        config.Pylint.Name,
 		HeadBranch:  repoBranch,
 		HeadSHA:     commitSHA,
+		DetailsURL:  github.String(fmt.Sprintf("%s/%s/%s/report/%s", config.Pylint.URL, repoOwner, repoName, commitSHA)),
 		Status:      github.String("completed"),
 		StartedAt:   &github.Timestamp{startTime},
 		CompletedAt: &github.Timestamp{time.Now()},
