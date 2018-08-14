@@ -21,6 +21,7 @@ type Configuration struct {
 		URL          string `yaml:"url"`
 		ReportsPath  string `yaml:"reports_path"`
 		KeyFile      string `yaml:"key_file"`
+		AdminId      int64  `yaml:"admin_id"`
 		DatabaseFile string `yaml:"database_file"`
 	} `yaml:"pylint"`
 	Redis struct {
@@ -37,6 +38,7 @@ func (c *Configuration) Debug() {
 	fmt.Printf("Name: %v\n", c.Pylint.Name)
 	fmt.Printf("Port: %v\n", c.Pylint.Port)
 	fmt.Printf("DatabaseFile: %v\n", c.Pylint.DatabaseFile)
+	fmt.Printf("AdminId: %v\n", c.Pylint.AdminId)
 }
 
 // parse configuration from environment

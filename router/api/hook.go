@@ -14,6 +14,7 @@ import (
 )
 
 var enqueuer = service.GetEnqueuer()
+var config = model.GetConfiguration()
 
 // Handle all incoming GitHub hooks
 func HookHandler(w http.ResponseWriter, r *http.Request) {
@@ -45,8 +46,14 @@ func HookHandler(w http.ResponseWriter, r *http.Request) {
 	//
 	// GitHub API docs: https://developer.github.com/v3/activity/events/types/#installationevent
 	case *github.InstallationEvent:
-		switch *e.Action {
+		if config.Pylint.AdminId != 0 {
+			// we restrict installations only to installations from the specified user
+			if config.Pylint.AdminId != *e.GetSender().ID {
+				http.Error(w, "400 Bad Request - Installation API is restricted", http.StatusBadRequest)
+			}
+		}
 
+		switch *e.Action {
 		case "created":
 			store.DS().CreateInstallation(&model.Installation{
 				SenderID:       int(*e.GetSender().ID),
