@@ -127,13 +127,13 @@ func (msg *MessageLine) WarningLevel() string {
 
 func (msg *MessageLine) ToRunAnnotation() *github.CheckRunAnnotation {
 	return &github.CheckRunAnnotation{
-		FileName:     github.String(msg.File),
-		BlobHRef:     github.String("https://example.com"),
-		StartLine:    github.Int(msg.Line),
-		EndLine:      github.Int(msg.Line),
-		WarningLevel: github.String(msg.WarningLevel()),
-		Message:      github.String(msg.Message),
-		RawDetails:   github.String(msg.Raw),
-		Title:        github.String("Flake8-Check"),
+		Path:            github.String(msg.File),
+		BlobHRef:        github.String("https://example.com"),
+		StartLine:       github.Int(msg.Line),
+		EndLine:         github.Int(msg.Line),
+		AnnotationLevel: github.String(msg.WarningLevel()),
+		Message:         github.String(msg.Message),
+		RawDetails:      github.String(msg.Raw),
+		Title:           github.String("Flake8-Check"),
 	}
 }
